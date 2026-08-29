@@ -1,5 +1,5 @@
 // MiAhorro - Service Worker
-const CACHE = 'miahorro-v3'; 
+const CACHE = 'miahorro-v5';
 const CORE = [
   './',
   './index.html',
