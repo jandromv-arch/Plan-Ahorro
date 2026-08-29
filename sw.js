@@ -1,12 +1,11 @@
 // MiAhorro - Service Worker
-// Cachea la app para que funcione sin conexión una vez abierta.
-const CACHE = 'miahorro-v2'; // <--- VERSIÓN ACTUALIZADA PARA FORZAR RECARGA
+const CACHE = 'miahorro-v3'; 
 const CORE = [
   './',
   './index.html',
   './manifest.json',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', function(e){
@@ -17,7 +16,6 @@ self.addEventListener('install', function(e){
 self.addEventListener('activate', function(e){
   e.waitUntil(
     caches.keys().then(function(keys){
-      // Borra el caché antiguo de la v1
       return Promise.all(keys.map(function(k){ if(k!==CACHE) return caches.delete(k); }));
     })
   );
