@@ -953,31 +953,7 @@ function doAdd(){var imp=parseFloat(document.getElementById('add-importe').value
 
 /* ---------- datos ---------- */
 function exportBackup(){var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mis-gastos-backup.json';a.click();}
-function importBackup(ev){var f=ev.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){try{
-    var o=JSON.parse(rd.result);
-    // Detectar formato ANTIGUO (app de pareja): mov es un objeto con listas por persona
-    if(o && o.mov && !Array.isArray(o.mov) && typeof o.mov==='object'){
-      // Coger la lista de movimientos más grande (será la del titular de esta app)
-      var claves=Object.keys(o.mov).filter(function(k){return Array.isArray(o.mov[k]);});
-      var claveTitular=null,maxLen=-1;
-      ['principal'].concat(claves).forEach(function(k){if(o.mov[k]&&o.mov[k].length>maxLen){maxLen=o.mov[k].length;claveTitular=k;}});
-      var movAntiguos = claveTitular?o.mov[claveTitular]:[];
-      var personas=claves.filter(function(k){return o.mov[k].length;});
-      var nuevo={params:nuevoEstado().params,mov:movAntiguos,rules:o.rules||REGLAS_DEF.slice(),budgets:o.budgets||{},hiddenKpis:[]};
-      if(o.params){var pk=o.params[claveTitular]||o.params.principal||(o.params.obj!==undefined?o.params:null);if(pk)nuevo.params=Object.assign(nuevo.params,pk);}
-      if(nuevo.params.objTotal===undefined)nuevo.params.objTotal=0;
-      state=nuevo;guardar();render();
-      var otras=personas.filter(function(p){return p!==claveTitular;});
-      alert('✅ Copia restaurada. Importé '+movAntiguos.length+' movimientos.'+(otras.length?('\n\n(El archivo también tenía otra lista de datos que no se importa: esta app es solo para un perfil.)'):''));
-      return;
-    }
-    // Formato NUEVO (mono-perfil)
-    if(o && Array.isArray(o.mov)){
-      state=o;if(!state.rules)state.rules=REGLAS_DEF.slice();if(!state.budgets)state.budgets={};if(!state.hiddenKpis)state.hiddenKpis=[];if(!state.params)state.params=nuevoEstado().params;if(state.params.objTotal===undefined)state.params.objTotal=0;
-      guardar();render();alert('✅ Copia restaurada. '+state.mov.length+' movimientos.');return;
-    }
-    alert('El archivo no tiene el formato esperado (no encuentro movimientos dentro).');
-  }catch(e){alert('No pude leer el archivo: '+e.message);}};rd.readAsText(f);}
+function importBackup(ev){var f=ev.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){try{state=JSON.parse(rd.result);if(!state.rules)state.rules=REGLAS_DEF.slice();if(!state.budgets)state.budgets={};guardar();render();alert('✅ Copia restaurada.');}catch(e){alert('Archivo no válido.');}};rd.readAsText(f);}
 function borrarTodo(){if(!confirm('¿Borrar TODOS los movimientos? (ajustes y reglas se mantienen)'))return;state.mov=[];guardar();render();}
 function importExcel(ev){var f=ev.target.files[0];if(!f)return;if(typeof XLSX==='undefined'){alert('Sin conexión, no puedo leer el Excel.');return;}
   var rd=new FileReader();rd.onload=function(){try{
