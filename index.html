@@ -197,7 +197,7 @@
 </div></div>
 
 <script>
-if (typeof pdfjsLib !== 'undefined') {
+if (typeof window !== 'undefined' && window.pdfjsLib) {
   pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
@@ -281,10 +281,10 @@ var REGLAS_DEF=[
 ['AIRBNB','Viajes'],['BOOKING','Viajes'],['RYANAIR','Viajes'],['VUELING','Viajes'],['IBERIA','Viajes'],['HOTEL','Viajes'],['OPORTO','Viajes'],['BOEIRA GARDEN','Viajes'],
 ['GYMPASS','Ocio / Entretenimiento'],['GYM','Ocio / Entretenimiento'],['CINE','Ocio / Entretenimiento']];
 
-function limpiarImporte(v){var s=String(v).replace(/ /g,'').replace(/[€\s]/g,'');if(s==='')return null;
+function limpiarImporte(v){var s=String(v).replace(/\u00A0/g,'').replace(/[€\s]/g,'');if(s==='')return null;
   if(/,\d{1,2}$/.test(s)&&s.indexOf('.')>=0){s=s.replace(/\./g,'').replace(',','.');}else s=s.replace(',','.');
   var n=parseFloat(s);return isNaN(n)?null:Math.round(n*100)/100;}
-function limpiarConcepto(v){return String(v||'').split('\')[0].replace(/\s+/g,' ').trim();}
+function limpiarConcepto(v){return String(v||'').split('\\')[0].replace(/\s+/g,' ').trim();}
 function parseFecha(v,yearHint){var s=String(v||'').trim();
   var m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/);
   if(m){var d=+m[1],mo=+m[2],y=m[3]?+m[3]:(yearHint||new Date().getFullYear());if(y<100)y+=2000;
@@ -294,8 +294,7 @@ function parseFecha(v,yearHint){var s=String(v||'').trim();
 function primeraPalabra(con){var t=String(con).toUpperCase().replace(/[ÁÀÄ]/g,'A').replace(/[ÉÈË]/g,'E').replace(/[ÍÌÏ]/g,'I').replace(/[ÓÒÖ]/g,'O').replace(/[ÚÙÜ]/g,'U').split(/[^A-ZÑ]+/).filter(function(x){return x.length>=4;});return t.length?t[0]:String(con).toUpperCase().trim();}
 function matchRegla(con){var c=String(con).toUpperCase();for(var i=0;i<state.rules.length;i++){if(state.rules[i][0]&&c.indexOf(String(state.rules[i][0]).toUpperCase())>=0)return state.rules[i][1];}return null;}
 
-function parseCsvBanco(txt){var lineas=txt.split('
-').filter(function(l){return l.trim();});
+function parseCsvBanco(txt){var lineas=txt.split('\n').filter(function(l){return l.trim();});
   var sep=detSep(lineas[0]);var filas=parseCsv(txt,sep);if(!filas.length)return [];
   var cab=filas[0].map(function(x){return String(x).toLowerCase().trim();});
   var joined=cab.join(' ');
@@ -349,15 +348,13 @@ function parsePdfIngMovimientos(txt){
     'REDONDEO':CAT_AHORRO,'INGRESO BIZUM':CAT_TRASPASO,'INGRESOS DE OTRAS ENTIDADES':CAT_TRASPASO,'ABONO DE INTERESES':CAT_TRASPASO,
     'COMPRAS (OTROS)':'Compras / Ropa','OTROS GASTOS (OTROS)':'Caprichos / Otros'};
 
-  var flat=txt.replace(/
-/g,' ').replace(/
-/g,' ').replace(/ /g,' ').replace(/\s+/g,' ');
+  var flat=txt.replace(/\r/g,' ').replace(/\n/g,' ').replace(/\u00A0/g,' ').replace(/\s+/g,' ');
 
-  var partes=flat.split(/(?=\d{2}\/\d{2}\/\d{4})/);
+  var partes=flat.split(/(?=\b\d{2}\/\d{2}\/\d{4}\b)/);
   var out=[];
   partes.forEach(function(seg){
     seg=seg.trim(); if(!seg)return;
-    var mf=seg.match(/^(\d{2}\/\d{2}\/\d{4})/); if(!mf)return;
+    var mf=seg.match(/^(\d{2}\/\d{2}\/\d{4})\b/); if(!mf)return;
     var fecha=mf[1];
     var cuerpo=seg.substring(fecha.length).trim();
     var m=cuerpo.match(/(-?\d[\d.]*\.\d{2}|-?\d[\d.]*,\d{2})/);
@@ -392,10 +389,9 @@ function parsePdfIngMovimientos(txt){
 }
 function isoFecha(dmy){var p=String(dmy).split('/');if(p.length!==3)return null;return p[2]+'-'+('0'+p[1]).slice(-2)+'-'+('0'+p[0]).slice(-2);}
 
-function parsePdfIngIntegrado(txt){var lines=txt.split('
-');
+function parsePdfIngIntegrado(txt){var lines=txt.split('\n');
   var out=[]; var yearHint=(new Date()).getFullYear();
-  for(var i=0;i<Math.min(lines.length,50);i++){var m=lines[i].match(/(20\d{2})/);if(m){yearHint=+m[1];break;}}
+  for(var i=0;i<Math.min(lines.length,50);i++){var m=lines[i].match(/\b(20\d{2})\b/);if(m){yearHint=+m[1];break;}}
   var reCta=/Cuenta\s+(N[ÓO]MINA|NoCuenta|NARANJA|NARANJA\s*AHORRO|COMBINADA|EFECTIVO)\s*-?\s*IBAN/i;
   var reMov=/^\s*(\d{2}\/\d{2})\s+(\d{2}\/\d{2})\s+(.+?)\s+(-?\d[\d\.]*,\d{2})\s*€?\s+(-?\d[\d\.]*,\d{2})\s*€?\s*$/;
   var subcuenta='ING NÓMINA';
@@ -451,12 +447,10 @@ function parsePdfIngIntegrado(txt){var lines=txt.split('
   return out;
 }
 
-function detSep(l){var s=[[',',(l.match(/,/g)||[]).length],[';',(l.match(/;/g)||[]).length],['	',(l.match(/	/g)||[]).length]];s.sort(function(a,b){return b[1]-a[1];});return s[0][1]>0?s[0][0]:',';}
+function detSep(l){var s=[[',',(l.match(/,/g)||[]).length],[';',(l.match(/;/g)||[]).length],['\t',(l.match(/\t/g)||[]).length]];s.sort(function(a,b){return b[1]-a[1];});return s[0][1]>0?s[0][0]:',';}
 function parseCsv(t,sep){var rows=[],row=[],f='',q=false;for(var i=0;i<t.length;i++){var ch=t[i];
   if(q){if(ch=='"'){if(t[i+1]=='"'){f+='"';i++;}else q=false;}else f+=ch;}
-  else{if(ch=='"')q=true;else if(ch===sep){row.push(f);f='';}else if(ch=='
-'){row.push(f);rows.push(row);row=[];f='';}else if(ch!='
-')f+=ch;}}
+  else{if(ch=='"')q=true;else if(ch===sep){row.push(f);f='';}else if(ch=='\n'){row.push(f);rows.push(row);row=[];f='';}else if(ch!='\r')f+=ch;}}
   if(f!==''||row.length){row.push(f);rows.push(row);}return rows;}
 
 var KEY='misGastos_v1';
@@ -537,7 +531,7 @@ var editKpis=false;
 function kpiHidden(key){return (state.hiddenKpis||[]).indexOf(key)>=0;}
 function kpi(key,l,v,c,s,onclick){
   if(kpiHidden(key)&&!editKpis)return '';
-  var x=editKpis?'<button class="kpi-x" onclick="event.stopPropagation();hideKpi(''+key+'')">'+(kpiHidden(key)?'＋':'✕')+'</button>':'';
+  var x=editKpis?'<button class="kpi-x" onclick="event.stopPropagation();hideKpi(\''+key+'\')">'+(kpiHidden(key)?'＋':'✕')+'</button>':'';
   var faded=editKpis&&kpiHidden(key)?';opacity:.4':'';
   return '<div class="kpi" style="--c:'+c+(onclick&&!editKpis?';cursor:pointer':'')+faded+'"'+(onclick&&!editKpis?' onclick="'+onclick+'"':'')+'>'+x+'<div class="lab">'+l+'</div><div class="val">'+v+'</div>'+(s?'<div class="sub">'+s+'</div>':'')+'</div>';
 }
@@ -553,8 +547,8 @@ function renderResumen(){
     +kpi('gastos','Gastos',eur0.format(d.gastos),'var(--coral)','sin traspasos')
     +kpi('ahorroMes','Ahorro mes',eur0.format(d.ahorroExplicito),'var(--navy)','a MyInvestor/Naranja')
     +kpi('sinGastar',d.ahorroResiduo>=0?'Sin gastar':'Déficit',eur0.format(d.ahorroResiduo),d.ahorroResiduo>=0?'var(--green)':'var(--coral)','ingresos−gastos−ahorro');
-  var hormCard=kpiHidden('hormiga')&&!editKpis?'':'<div class="kpi" style="--c:var(--purple)'+(editKpis&&kpiHidden('hormiga')?';opacity:.4':'')+(editKpis?'':';cursor:pointer')+'"'+(editKpis?'':' onclick="toggleHorm()"')+'>'+(editKpis?'<button class="kpi-x" onclick="event.stopPropagation();hideKpi('hormiga')">'+(kpiHidden('hormiga')?'＋':'✕')+'</button>':'')+'<div class="lab">Hormiga 🐜</div><div class="val">'+eur0.format(d.horm)+'</div><div class="sub">'+d.hormN+' mov · toca para ver</div></div>';
-  var objCard=kpiHidden('objetivoCheck')&&!editKpis?'':'<div class="kpi" style="--c:'+(cumple?'var(--green)':'var(--coral)')+(editKpis&&kpiHidden('objetivoCheck')?';opacity:.4':'')+'">'+(editKpis?'<button class="kpi-x" onclick="event.stopPropagation();hideKpi('objetivoCheck')">'+(kpiHidden('objetivoCheck')?'＋':'✕')+'</button>':'')+'<div class="lab">Objetivo</div><div class="val"><span class="badge '+(cumple?'ok':'no')+'">'+(cumple?'✅':'❌')+'</span></div></div>';
+  var hormCard=kpiHidden('hormiga')&&!editKpis?'':'<div class="kpi" style="--c:var(--purple)'+(editKpis&&kpiHidden('hormiga')?';opacity:.4':'')+(editKpis?'':';cursor:pointer')+'"'+(editKpis?'':' onclick="toggleHorm()"')+'>'+(editKpis?'<button class="kpi-x" onclick="event.stopPropagation();hideKpi(\'hormiga\')">'+(kpiHidden('hormiga')?'＋':'✕')+'</button>':'')+'<div class="lab">Hormiga 🐜</div><div class="val">'+eur0.format(d.horm)+'</div><div class="sub">'+d.hormN+' mov · toca para ver</div></div>';
+  var objCard=kpiHidden('objetivoCheck')&&!editKpis?'':'<div class="kpi" style="--c:'+(cumple?'var(--green)':'var(--coral)')+(editKpis&&kpiHidden('objetivoCheck')?';opacity:.4':'')+'">'+(editKpis?'<button class="kpi-x" onclick="event.stopPropagation();hideKpi(\'objetivoCheck\')">'+(kpiHidden('objetivoCheck')?'＋':'✕')+'</button>':'')+'<div class="lab">Objetivo</div><div class="val"><span class="badge '+(cumple?'ok':'no')+'">'+(cumple?'✅':'❌')+'</span></div></div>';
   var kB=kpi('mascota','🐾 Mascota',eur2.format(d.mascota),'var(--amber)','')
     +hormCard
     +kpi('objetivo','Objetivo',eur0.format(d.obj),'var(--muted)','')
@@ -687,9 +681,7 @@ function setCat(i,v){
     guardar();}}
   render();
 }
-function delMov(i){var m=state.mov[i];if(!m)return;if(!confirm('¿Borrar este movimiento?
-
-'+(m.c||'')+'  ·  '+eur2.format(+m.imp||0)))return;state.mov.splice(i,1);guardar();render();}
+function delMov(i){var m=state.mov[i];if(!m)return;if(!confirm('¿Borrar este movimiento?\n\n'+(m.c||'')+'  ·  '+eur2.format(+m.imp||0)))return;state.mov.splice(i,1);guardar();render();}
 
 function renderAhorro(){
   var d=calc();var ahoAcum=ahorroTotalHistorico();var pp=promedioAhorro();
@@ -722,7 +714,7 @@ function renderMetaTotal(ahoAcum,pp){
   if(meta<=0){
     return '<div class="panel" style="text-align:center"><h3 style="margin-bottom:6px">🏁 Meta de ahorro total</h3>'
       +'<div class="hint">Ponte una meta (ej. 15.000€) en Ajustes y aquí verás cuánto te falta y cuándo la alcanzarás.</div>'
-      +'<button class="btn btn-primary" style="margin-top:10px" onclick="setTab('ajustes')">Poner mi meta</button></div>';
+      +'<button class="btn btn-primary" style="margin-top:10px" onclick="setTab(\'ajustes\')">Poner mi meta</button></div>';
   }
   var pctg=Math.max(0,Math.min(ahoAcum/meta,1));
   var falta=Math.max(meta-ahoAcum,0);
@@ -751,11 +743,11 @@ function renderAjustes(){
   var p=state.params;
   document.getElementById('v-ajustes').innerHTML=
      '<div class="panel"><h3>⚙️ Tus ajustes</h3>'
-    +'<div class="param"><label>Objetivo de ahorro al mes (€)</label><input type="number" step="10" value="'+(p.obj||0)+'" onchange="setParam('obj',this.value)"></div>'
-    +'<div class="param"><label>🏁 Meta de ahorro TOTAL (€) — a dónde quieres llegar</label><input type="number" step="500" value="'+(p.objTotal||0)+'" onchange="setParam('objTotal',this.value)"></div>'
-    +'<div class="param"><label>Umbral gasto hormiga (€)</label><input type="number" step="1" value="'+(p.umbral||0)+'" onchange="setParam('umbral',this.value)"></div>'
-    +'<div class="param"><label>💰 Saldo ahorrado inicial (€)</label><input type="number" step="100" value="'+(p.saldoInicial||0)+'" onchange="setParam('saldoInicial',this.value)"></div>'
-    +'<div class="param"><label>📅 Fecha de ese saldo (para no duplicar)</label><input type="date" value="'+(p.saldoFecha||'')+'" onchange="setParam('saldoFecha',this.value)"></div>'
+    +'<div class="param"><label>Objetivo de ahorro al mes (€)</label><input type="number" step="10" value="'+(p.obj||0)+'" onchange="setParam(\'obj\',this.value)"></div>'
+    +'<div class="param"><label>🏁 Meta de ahorro TOTAL (€) — a dónde quieres llegar</label><input type="number" step="500" value="'+(p.objTotal||0)+'" onchange="setParam(\'objTotal\',this.value)"></div>'
+    +'<div class="param"><label>Umbral gasto hormiga (€)</label><input type="number" step="1" value="'+(p.umbral||0)+'" onchange="setParam(\'umbral\',this.value)"></div>'
+    +'<div class="param"><label>💰 Saldo ahorrado inicial (€)</label><input type="number" step="100" value="'+(p.saldoInicial||0)+'" onchange="setParam(\'saldoInicial\',this.value)"></div>'
+    +'<div class="param"><label>📅 Fecha de ese saldo (para no duplicar)</label><input type="date" value="'+(p.saldoFecha||'')+'" onchange="setParam(\'saldoFecha\',this.value)"></div>'
     +'<div class="hint">Los ingresos reconocidos como nómina son: <b>'+NOMINA_KW.join(' · ')+'</b></div>'
     +'</div>'
     +'<div class="panel"><h3>🎯 Presupuestos mensuales</h3><div class="hint" style="margin-bottom:8px">Máximo por categoría al mes. Vacío = sin límite.</div><div id="budgets"></div></div>'
@@ -763,15 +755,15 @@ function renderAjustes(){
     +'<div style="display:flex;gap:8px;flex-wrap:wrap">'
     +'<button class="btn btn-primary" onclick="exportExcel()">⬇️ Excel</button>'
     +'<button class="btn btn-ghost" onclick="exportBackup()">⬇️ Copia .json</button>'
-    +'<button class="btn btn-ghost" onclick="document.getElementById('restore').click()">⬆️ Restaurar</button>'
+    +'<button class="btn btn-ghost" onclick="document.getElementById(\'restore\').click()">⬆️ Restaurar</button>'
     +'<input type="file" id="restore" accept="application/json" style="display:none" onchange="importBackup(event)">'
-    +'<button class="btn btn-ghost" onclick="document.getElementById('impxls').click()">📊 Importar mi Excel</button>'
+    +'<button class="btn btn-ghost" onclick="document.getElementById(\'impxls\').click()">📊 Importar mi Excel</button>'
     +'<input type="file" id="impxls" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">'
     +'<button class="btn btn-ghost" onclick="borrarTodo()">🧹 Borrar todo</button>'
     +'</div><div class="hint" style="margin-top:10px">Tus datos se guardan solo en este dispositivo. Haz copia de vez en cuando.</div></div>';
   var b=state.budgets||{};
   document.getElementById('budgets').innerHTML=CATNAMES.filter(function(c){return c!==CAT_INGRESO&&c!==CAT_TRASPASO&&c!==CAT_AHORRO;}).map(function(c){
-    return '<div class="budgetrow"><div style="font-size:13px"><b>'+c+'</b></div><input type="number" step="10" placeholder="—" value="'+(b[c]||'')+'" onchange="setBudget(''+c.replace(/'/g,"\'")+'',this.value)"><span class="hint">€/mes</span></div>';
+    return '<div class="budgetrow"><div style="font-size:13px"><b>'+c+'</b></div><input type="number" step="10" placeholder="—" value="'+(b[c]||'')+'" onchange="setBudget(\''+c.replace(/'/g,"\\'")+'\',this.value)"><span class="hint">€/mes</span></div>';
   }).join('');
 }
 function setParam(k,v){if(k==='saldoFecha')state.params[k]=v||'';else state.params[k]=parseFloat(v)||0;guardar();render();}
@@ -857,8 +849,7 @@ function leerArchivo(f){var nombre=f.name.toLowerCase(),esPdf=nombre.endsWith('.
     for(var p=1;p<=pdf.numPages;p++){var page=await pdf.getPage(p);var tc=await page.getTextContent();
       var lineas={};tc.items.forEach(function(it){var y=Math.round(it.transform[5]);if(!lineas[y])lineas[y]=[];lineas[y].push({x:it.transform[4],t:it.str});});
       var ys=Object.keys(lineas).map(Number).sort(function(a,b){return b-a;});
-      ys.forEach(function(y){lineas[y].sort(function(a,b){return a.x-b.x;});todo+=lineas[y].map(function(o){return o.t;}).join(' ')+'
-';});}
+      ys.forEach(function(y){lineas[y].sort(function(a,b){return a.x-b.x;});todo+=lineas[y].map(function(o){return o.t;}).join(' ')+'\n';});}
     window._raw=todo;document.getElementById('imp-msg').innerHTML='✅ PDF leído ('+pdf.numPages+' págs). Pulsa Analizar.';document.getElementById('btn-analizar').disabled=false;
   }catch(e){document.getElementById('imp-msg').innerHTML='❌ No pude leer el PDF: '+e.message;}};rd.readAsArrayBuffer(f);}
   else{var rd=new FileReader();rd.onload=function(){window._raw=rd.result;document.getElementById('imp-msg').innerHTML='✅ CSV cargado. Pulsa Analizar.';document.getElementById('btn-analizar').disabled=false;};rd.readAsText(f,'utf-8');}}
@@ -876,7 +867,7 @@ function mostrarPaso2(){var kws=Object.keys(pendientes.unknown);
   var ti=0,tg=0,tt=0;pendientes.rows.forEach(function(r){if(r.cat===CAT_TRASPASO)tt++;else if(r.cat===CAT_INGRESO)ti++;else if(r.imp<0)tg++;});
   document.getElementById('imp-resumen').innerHTML='<b>'+pendientes.rows.length+'</b> movimientos: '+ti+' ingresos · '+tg+' gastos · <span style="color:var(--muted)">'+tt+' traspasos (se ignoran)</span>. '+(kws.length?'Dime dónde va esto:':'¡Todo reconocido!');
   var opts=CATNAMES.filter(function(c){return c!==CAT_INGRESO&&c!==CAT_TRASPASO;}).map(function(c){return '<option'+(c==='Caprichos / Otros'?' selected':'')+'>'+c+'</option>';}).join('');
-  document.getElementById('unknowns').innerHTML=kws.map(function(k){return '<div class="unk"><div><b>'+esc(k)+'</b><br><small>'+esc(pendientes.unknown[k].ejemplo.slice(0,30))+'</small></div><select onchange="setUnknown(''+k.replace(/'/g,"\'")+'',this.value)">'+opts+'</select></div>';}).join('');
+  document.getElementById('unknowns').innerHTML=kws.map(function(k){return '<div class="unk"><div><b>'+esc(k)+'</b><br><small>'+esc(pendientes.unknown[k].ejemplo.slice(0,30))+'</small></div><select onchange="setUnknown(\''+k.replace(/'/g,"\\'")+'\',this.value)">'+opts+'</select></div>';}).join('');
   document.getElementById('imp-step1').style.display='none';document.getElementById('imp-step2').style.display='';
 }
 function setUnknown(k,v){pendientes.unknown[k].cat=v;}
@@ -910,9 +901,7 @@ function importBackup(ev){var f=ev.target.files[0];if(!f)return;var rd=new FileR
       if(nuevo.params.objTotal===undefined)nuevo.params.objTotal=0;
       state=nuevo;guardar();render();
       var otras=personas.filter(function(p){return p!==claveTitular;});
-      alert('✅ Copia restaurada. Importé '+movAntiguos.length+' movimientos.'+(otras.length?('
-
-(El archivo también tenía otra lista de datos que no se importa: esta app es solo para un perfil.)'):''));
+      alert('✅ Copia restaurada. Importé '+movAntiguos.length+' movimientos.'+(otras.length?('\n\n(El archivo también tenía otra lista de datos que no se importa: esta app es solo para un perfil.)'):''));
       return;
     }
     if(o && Array.isArray(o.mov)){
@@ -964,7 +953,7 @@ function exportExcel(){if(typeof XLSX==='undefined'){alert('Sin conexión, no pu
 
 aplicarTema();
 setTab('resumen');
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=2').catch(function(){});});} // <-- CACHE BUSTER AQUÍ
 </script>
 </body>
 </html>
