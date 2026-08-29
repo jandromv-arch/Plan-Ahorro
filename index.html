@@ -349,7 +349,8 @@ function parsePdfIngMovimientos(txt){
     'REDONDEO':CAT_AHORRO,'INGRESO BIZUM':CAT_TRASPASO,'INGRESOS DE OTRAS ENTIDADES':CAT_TRASPASO,'ABONO DE INTERESES':CAT_TRASPASO,
     'COMPRAS (OTROS)':'Compras / Ropa','OTROS GASTOS (OTROS)':'Caprichos / Otros'};
 
-  var flat=txt.replace(//g,' ').replace(/
+  var flat=txt.replace(/
+/g,' ').replace(/
 /g,' ').replace(/ /g,' ').replace(/\s+/g,' ');
 
   var partes=flat.split(/(?=\d{2}\/\d{2}\/\d{4})/);
@@ -454,7 +455,8 @@ function detSep(l){var s=[[',',(l.match(/,/g)||[]).length],[';',(l.match(/;/g)||
 function parseCsv(t,sep){var rows=[],row=[],f='',q=false;for(var i=0;i<t.length;i++){var ch=t[i];
   if(q){if(ch=='"'){if(t[i+1]=='"'){f+='"';i++;}else q=false;}else f+=ch;}
   else{if(ch=='"')q=true;else if(ch===sep){row.push(f);f='';}else if(ch=='
-'){row.push(f);rows.push(row);row=[];f='';}else if(ch!='')f+=ch;}}
+'){row.push(f);rows.push(row);row=[];f='';}else if(ch!='
+')f+=ch;}}
   if(f!==''||row.length){row.push(f);rows.push(row);}return rows;}
 
 var KEY='misGastos_v1';
