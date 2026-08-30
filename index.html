@@ -9,9 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="MiAhorro">
 <meta name="mobile-web-app-capable" content="yes">
 <title>MiAhorro</title>
-<link rel="manifest" href="manifest.json?v=2">
-<link rel="apple-touch-icon" href="icon-180.png?v=2">
-<link rel="icon" type="image/png" href="icon-192.png?v=2">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -95,6 +95,7 @@
   .anual-val{font-size:18px;font-weight:800;margin-top:2px}
   .budgetrow{display:grid;grid-template-columns:1fr 100px auto;gap:8px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
   .budgetrow input{border:1px solid var(--line);border-radius:8px;padding:6px;font-size:13px}
+  /* barra de pestañas inferior tipo app */
   .tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);display:flex;z-index:40;box-shadow:0 -2px 10px rgba(0,0,0,.04)}
   .tab{flex:1;border:0;background:none;padding:9px 4px 8px;font-size:10.5px;font-weight:700;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
   .tab .ic{font-size:19px}
@@ -120,13 +121,13 @@
 <div class="wrap">
   <div class="head">
     <div class="brand">
-      <svg width="36" height="36" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="flex:0 0 36px">
-        <rect x="4" y="4" width="92" height="92" rx="26" fill="#141c2a" stroke="#3c485c" stroke-width="2"/>
-        <rect x="26" y="56" width="12" height="18" rx="6" fill="#F2B441"/>
-        <rect x="44" y="48" width="12" height="26" rx="6" fill="#F0C878"/>
-        <rect x="62" y="40" width="12" height="34" rx="6" fill="#5AC88C"/>
-        <path d="M26 46 L68 26" stroke="#0FB5A6" stroke-width="5" stroke-linecap="round"/>
-        <path d="M68 26 L58 26 M68 26 L68 36" stroke="#0FB5A6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      <svg width="36" height="36" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="flex:0 0 36px">
+        <rect x="8" y="8" width="184" height="184" rx="46" fill="#20272e" stroke="#3a424c" stroke-width="2.5"/>
+        <rect x="54" y="128" width="20" height="30" rx="10" fill="#F2B441"/>
+        <rect x="90" y="116" width="20" height="42" rx="10" fill="#F2C46A"/>
+        <rect x="126" y="102" width="20" height="56" rx="10" fill="#5DBE7D"/>
+        <path d="M48 108 L98 74 L128 88 L156 52" fill="none" stroke="#0FB5A6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M132 50 L158 50 L158 76" fill="none" stroke="#0FB5A6" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <span class="brand-txt">Mi<span class="brand-hl">Ahorro</span></span>
     </div>
@@ -144,9 +145,13 @@
     </select>
   </div>
 
+  <!-- RESUMEN -->
   <div class="view active" id="v-resumen"></div>
+  <!-- MOVIMIENTOS -->
   <div class="view" id="v-movs"></div>
+  <!-- AHORRO -->
   <div class="view" id="v-ahorro"></div>
+  <!-- AJUSTES -->
   <div class="view" id="v-ajustes"></div>
 </div>
 
@@ -157,6 +162,7 @@
   <button class="tab" data-v="ajustes" onclick="setTab('ajustes')"><span class="ic">⚙️</span>Ajustes</button>
 </div>
 
+<!-- IMPORTAR -->
 <div class="overlay" id="ov-imp"><div class="modal">
   <div id="imp-step1">
     <h3>📤 Subir extracto</h3>
@@ -179,6 +185,7 @@
   </div>
 </div></div>
 
+<!-- AÑADIR -->
 <div class="overlay" id="ov-add"><div class="modal">
   <h3>➕ Añadir movimiento</h3>
   <label>Fecha</label><input type="date" id="add-fecha">
@@ -190,6 +197,7 @@
     <button class="btn btn-primary" onclick="doAdd()">Añadir</button></div>
 </div></div>
 
+<!-- DESGLOSE AHORRO -->
 <div class="overlay" id="ov-desglose"><div class="modal">
   <h3>💰 De dónde salen tus ahorros</h3>
   <div id="desgloseBody"></div>
@@ -197,21 +205,20 @@
 </div></div>
 
 <script>
-if (typeof window !== 'undefined' && window.pdfjsLib) {
-  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-}
-
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+/* ================= LÓGICA (categorías, reglas, parsers) ================= */
 var CATS=[['Vivienda (alquiler/hipoteca)','Esencial'],['Suministros (luz/agua/gas)','Esencial'],
 ['Comida / Supermercado','Esencial'],['Transporte','Esencial'],['Salud / Farmacia','Esencial'],
 ['Seguros','Esencial'],['Telefonia / Internet','Esencial'],['Deudas / Prestamos','Esencial'],
 ['Mascota','Esencial'],
 ['Restaurantes / Bares','Prescindible'],['Ocio / Entretenimiento','Prescindible'],
 ['Compras / Ropa','Prescindible'],['Suscripciones','Prescindible'],['Viajes','Prescindible'],
-['Cafe / Snacks','Prescindible'],['Caprichos / Otros','Prescindible'],
+['Cafe / Snacks','Prescindible'],['Belleza / Peluqueria','Prescindible'],['Regalos','Prescindible'],['Caprichos / Otros','Prescindible'],
 ['Ahorro (a MyInvestor)','Ahorro'],
 ['Traspaso interno','Traspaso'],['Ingresos / Abonos','Ingreso']];
 var TIPO={}; CATS.forEach(function(c){TIPO[c[0]]=c[1];});
 var CATNAMES=CATS.map(function(c){return c[0];});
+// Categorías FIJAS (no tiene sentido sugerir recortarlas)
 var CAT_FIJAS=['Vivienda (alquiler/hipoteca)','Suministros (luz/agua/gas)','Seguros','Deudas / Prestamos','Telefonia / Internet'];
 function esFija(c){return CAT_FIJAS.indexOf(c)>=0;}
 var CAT_TRASPASO='Traspaso interno';
@@ -219,15 +226,28 @@ var CAT_INGRESO='Ingresos / Abonos';
 var CAT_AHORRO='Ahorro (a MyInvestor)';
 var CAT_MASCOTA='Mascota';
 
+// Palabras que identifican un ingreso REAL de nómina/facturación
 var NOMINA_KW=['CARAT','REFINERY','SEEDTAG'];
+// Conceptos que indican APORTACIÓN A AHORRO (tanto MyInvestor como Cuenta Naranja mensual)
 var AHORRO_KW=['MYINVESTOR','MY INVESTOR','INVERSION','INVERSIÓN','MENSUAL','NARANJA','AHORRO'];
+// Traspasos "puros" que no cuentan ni como gasto, ni como ingreso, ni como ahorro
+// (ej. traspaso de Abanca a ING para pagar el piso, movimientos entre cuentas propias, etc.)
 var TRASPASO_KW=['TRASPASO','IMPUESTOS RETENIDOS','INTERESES A SU FAVOR','SALDO INICIAL','SALDO FINAL','TRANSFERENCIA A MI','TRANSFERENCIA DESDE'];
+// Conceptos de dinero compartido o del piso (traspasos internos, se ignoran en el cómputo)
 var CONCEPTO_PISO=['PISO','RENT','TEAM','ALQUILER PISO','RESERVA PISO'];
+// Conceptos personales que suelen ser bizums entre familia/amigos → tratar como traspaso
 var CONCEPTO_PERSONAL=['SIN CONCEPTO','SOBRA','DEVUELVAS'];
 
 function upper(s){return String(s||'').toUpperCase();}
 function containsAny(s,arr){s=upper(s);for(var i=0;i<arr.length;i++){if(s.indexOf(arr[i])>=0)return true;}return false;}
 function esNomina(concepto){return containsAny(concepto,NOMINA_KW);}
+// Bizum/transferencia RECIBIDA de una persona → ingreso.
+// Distingue "recibido/abono" (entra) de "emitido/enviado" (sale). Excluye movimientos propios.
+function esBizumRecibido(concepto){
+  var c=upper(concepto);
+  if(/EMITIDO|ENVIADO|A MI CUENTA|CUENTA PROPIA|MOVIMIENTO ING|ENTRE CUENTAS/.test(c))return false;
+  return /BIZUM.*RECIB|RECIB.*BIZUM|BIZUM DE |ABONO BIZUM|TRANSFERENCIA RECIBIDA DE |INGRESO BIZUM/.test(c);
+}
 function esAhorro(concepto){return containsAny(concepto,AHORRO_KW);}
 function esConceptoPiso(concepto){return containsAny(concepto,CONCEPTO_PISO);}
 function esConceptoPersonal(concepto){return containsAny(concepto,CONCEPTO_PERSONAL);}
@@ -236,32 +256,68 @@ function esTraspasoObvio(concepto){
   for(var i=0;i<TRASPASO_KW.length;i++){if(c.indexOf(TRASPASO_KW[i])>=0)return true;}
   return false;
 }
+// Cuentas consideradas de AHORRO
 function esCuentaAhorro(cuenta){
   var c=upper(cuenta||'');
   return c==='ING NARANJA' || c==='MYINVESTOR' || c.indexOf('NARANJA')>=0;
 }
+// Categoriza. Ahora usa la CUENTA para decidir bien:
+//  - Movimiento en ING NARANJA o MyInvestor → CAT_AHORRO (aportación o retirada según signo)
+//  - Concepto que menciona la otra cuenta de ahorro pero vive en NÓMINA/Abanca → también ahorro
+//  - Los demás traspasos internos (NÓMINA↔NoCuenta) → CAT_TRASPASO
+//  - Conceptos de piso/personal → CAT_TRASPASO
+//  - Nómina reconocida (Carat/Refinery/Seedtag) → CAT_INGRESO
+//  - Negativos con comercios → gasto según regla
 function categorizar(concepto, importe, cuenta){
   var c=upper(concepto), cta=upper(cuenta||'');
+
+  // ══ REGLA DE ORO ══
+  // INGRESO = solo tu nómina real (CARAT/REFINERY/SEEDTAG).
+  // GASTO   = solo dinero que sale a un tercero (comercio, recibo, alquiler).
+  // TRASPASO = mover TU dinero entre TUS cuentas (Abanca↔ING↔Naranja↔MyInvestor). No cuenta.
+  // AHORRO  = aportar/retirar de tus cuentas de ahorro (Naranja, MyInvestor).
+
+  // 1) Movimiento DENTRO de una cuenta de ahorro (Naranja / MyInvestor)
   if(esCuentaAhorro(cta)){
-    if(/TRASPASO|TRANSFERENCIA|BIZUM|INTERESES|IMPUESTOS|SALDO|APORT/i.test(c)) return CAT_AHORRO;
-    var rr=matchRegla(concepto); return rr || CAT_AHORRO;
+    if(/TRASPASO|TRANSFERENCIA|BIZUM|INTERESES|IMPUESTOS|SALDO|APORT|INGRESO|RECIBO/i.test(c)) return CAT_AHORRO;
+    var rr0=matchRegla(concepto); return rr0 || CAT_AHORRO;
   }
+
+  // 2) Concepto explícito de AHORRO (MENSUAL, INVERSION, MyInvestor, Naranja)
   if(esAhorro(concepto)) return CAT_AHORRO;
+
+  // 3) TRASPASO entre cuentas propias — lo detectamos ANTES que nada más.
+  //    Cualquier "traspaso", transferencia entre tus cuentas, o concepto de piso/personal.
   if(esTraspasoObvio(concepto)) return CAT_TRASPASO;
-  if(/TRANSFERENCIA/.test(c)||/BIZUM/.test(c)){
-    if(esConceptoPiso(concepto)||esConceptoPersonal(concepto)) return CAT_TRASPASO;
-  }
+  if(esConceptoPiso(concepto)) return CAT_TRASPASO;      // el "PISO" que mueves a ING es traspaso; el gasto real es el alquiler
+  if(esConceptoPersonal(concepto)) return CAT_TRASPASO;
+  // Transferencias/traspasos genéricos entre cuentas propias (sin comercio detrás)
+  if(/\bTRASPASO\b|MOVIMIENTO ING|ENTRE CUENTAS|A MI CUENTA|A CUENTA PROPIA|CUENTA PROPIA/i.test(c)) return CAT_TRASPASO;
+
+  // 4) POSITIVOS (entra dinero):
+  //    - Nómina (Carat/Refinery/Seedtag) → INGRESO
+  //    - Bizum recibido de una persona → INGRESO
+  //    - Lo demás (mover tu propio dinero entre cuentas) → TRASPASO
   if(importe>0){
     if(esNomina(concepto)) return CAT_INGRESO;
-    if(cta.indexOf('ING')>=0) return CAT_TRASPASO;
+    if(esBizumRecibido(concepto)) return CAT_INGRESO;
     return CAT_TRASPASO;
   }
-  var r=matchRegla(concepto); return r||null;
+
+  // 5) NEGATIVOS (sale dinero): gasto real. Buscamos la categoría por el comercio.
+  var r=matchRegla(concepto);
+  return r||null; // null → la app te preguntará la categoría
 }
 
+// Signo del movimiento de ahorro (para saber si es aportación o retirada) y
+// también para EVITAR duplicar el mismo traspaso visto desde las dos cuentas
+// (ej. NÓMINA emite -500 y NARANJA recibe +500: solo contamos uno).
+//   +1 = APORTACIÓN, -1 = RETIRADA, 0 = ignorar (duplicado)
 function signoAhorro(concepto,importe,cuenta){
   var cta=upper(cuenta||'');
+  // Vive en la propia cuenta de ahorro → ignoramos (ya lo contamos desde la de origen)
   if(esCuentaAhorro(cta)) return 0;
+  // Vive en cuenta operativa (NÓMINA / NoCuenta / Abanca): el signo del importe manda
   return importe<0 ? +1 : -1;
 }
 
@@ -279,13 +335,31 @@ var REGLAS_DEF=[
 ['SEGURO','Seguros'],['MAPFRE','Seguros'],['MUTUA','Seguros'],['AXA','Seguros'],['ALLIANZ','Seguros'],['GENERALI','Seguros'],['LINEA DIRECTA','Seguros'],['COFIDIS','Deudas / Prestamos'],
 ['AMAZON','Compras / Ropa'],['CORTE INGLES','Compras / Ropa'],['ZARA','Compras / Ropa'],['YVES ROCHER','Compras / Ropa'],['PRIMARK','Compras / Ropa'],['DECATHLON','Compras / Ropa'],['MANGO','Compras / Ropa'],['MEDIA MARKT','Compras / Ropa'],['ALIEXPRESS','Compras / Ropa'],['SHEIN','Compras / Ropa'],['SANTA GLORIA','Compras / Ropa'],['PAYPAL','Compras / Ropa'],['IKEA','Compras / Ropa'],['BABY CLOSET','Compras / Ropa'],
 ['AIRBNB','Viajes'],['BOOKING','Viajes'],['RYANAIR','Viajes'],['VUELING','Viajes'],['IBERIA','Viajes'],['HOTEL','Viajes'],['OPORTO','Viajes'],['BOEIRA GARDEN','Viajes'],
-['GYMPASS','Ocio / Entretenimiento'],['GYM','Ocio / Entretenimiento'],['CINE','Ocio / Entretenimiento']];
+['GYMPASS','Ocio / Entretenimiento'],['GYM','Ocio / Entretenimiento'],['CINE','Ocio / Entretenimiento'],
+// ── Ampliación: más comercios comunes en España ──
+['SUPERCOR','Comida / Supermercado'],['HIPERCOR','Comida / Supermercado'],['DIA ','Comida / Supermercado'],['MASYMAS','Comida / Supermercado'],['BM ','Comida / Supermercado'],['GADIS','Comida / Supermercado'],['FROIZ','Comida / Supermercado'],['CARNICERIA','Comida / Supermercado'],['FRUTERIA','Comida / Supermercado'],['PESCADERIA','Comida / Supermercado'],['MERCADO','Comida / Supermercado'],['COVIRAN','Comida / Supermercado'],['CONDIS','Comida / Supermercado'],['SUPECO','Comida / Supermercado'],['COSTCO','Comida / Supermercado'],
+['GOIKO','Restaurantes / Bares'],['FOSTERS','Restaurantes / Bares'],['VIPS','Restaurantes / Bares'],['GINOS','Restaurantes / Bares'],['UDON','Restaurantes / Bares'],['CIEN MONTADITOS','Restaurantes / Bares'],['100 MONTADITOS','Restaurantes / Bares'],['TACO BELL','Restaurantes / Bares'],['SUBWAY','Restaurantes / Bares'],['POPEYES','Restaurantes / Bares'],['FIVE GUYS','Restaurantes / Bares'],['BAR ','Restaurantes / Bares'],['TABERNA','Restaurantes / Bares'],['MESON','Restaurantes / Bares'],['CERVECERIA','Restaurantes / Bares'],['ASADOR','Restaurantes / Bares'],['UBER EATS','Restaurantes / Bares'],['UBEREATS','Restaurantes / Bares'],
+['DUNKIN','Cafe / Snacks'],['GELATO','Cafe / Snacks'],['HELADERIA','Cafe / Snacks'],['360','Cafe / Snacks'],['SANTAGLORIA','Cafe / Snacks'],['GRANIER','Cafe / Snacks'],
+['ZARA','Compras / Ropa'],['MANGO','Compras / Ropa'],['PULL','Compras / Ropa'],['BERSHKA','Compras / Ropa'],['STRADIVARIUS','Compras / Ropa'],['MASSIMO','Compras / Ropa'],['H&M','Compras / Ropa'],['HM ','Compras / Ropa'],['PRIMARK','Compras / Ropa'],['DECATHLON','Compras / Ropa'],['NIKE','Compras / Ropa'],['ADIDAS','Compras / Ropa'],['SPRINTER','Compras / Ropa'],['JD ','Compras / Ropa'],['LEFTIES','Compras / Ropa'],['SHEIN','Compras / Ropa'],['CORTEFIEL','Compras / Ropa'],['SPINGFIELD','Compras / Ropa'],['SPRINGFIELD','Compras / Ropa'],['KIABI','Compras / Ropa'],['C&A','Compras / Ropa'],['IKEA','Compras / Ropa'],['LEROY','Compras / Ropa'],['BRICO','Compras / Ropa'],['AKI','Compras / Ropa'],['CONFORAMA','Compras / Ropa'],['MEDIA MARKT','Compras / Ropa'],['MEDIAMARKT','Compras / Ropa'],['FNAC','Compras / Ropa'],['PC COMPONENTES','Compras / Ropa'],['PCCOMPONENTES','Compras / Ropa'],['ALIEXPRESS','Compras / Ropa'],['ACTION','Compras / Ropa'],['TIGER','Compras / Ropa'],['FLYING TIGER','Compras / Ropa'],['JULES','Compras / Ropa'],
+['REPSOL','Transporte'],['CEPSA','Transporte'],['GALP','Transporte'],['BP ','Transporte'],['SHELL','Transporte'],['GASOLINERA','Transporte'],['PETROPRIX','Transporte'],['BALLENOIL','Transporte'],['PLENOIL','Transporte'],['RENFE','Transporte'],['METRO','Transporte'],['EMT','Transporte'],['ALSA','Transporte'],['CABIFY','Transporte'],['UBER','Transporte'],['BOLT','Transporte'],['FREENOW','Transporte'],['TAXI','Transporte'],['BLABLACAR','Transporte'],['PARKING','Transporte'],['APARCAMIENTO','Transporte'],['AUTOPISTA','Transporte'],['PEAJE','Transporte'],['ITV','Transporte'],['TELEPEAJE','Transporte'],['BICIMAD','Transporte'],
+['FARMACIA','Salud / Farmacia'],['PARAFARMACIA','Salud / Farmacia'],['CLINICA','Salud / Farmacia'],['DENTAL','Salud / Farmacia'],['HOSPITAL','Salud / Farmacia'],['OPTICA','Salud / Farmacia'],['DKV','Salud / Farmacia'],['SANITAS','Salud / Farmacia'],['ADESLAS','Salud / Farmacia'],['FISIOTERAPIA','Salud / Farmacia'],
+['AMAZON PRIME','Suscripciones'],['AUDIBLE','Suscripciones'],['ICLOUD','Suscripciones'],['GOOGLE STORAGE','Suscripciones'],['GOOGLE ONE','Suscripciones'],['MICROSOFT','Suscripciones'],['ADOBE','Suscripciones'],['CRUNCHYROLL','Suscripciones'],['TWITCH','Suscripciones'],['PATREON','Suscripciones'],['NINTENDO','Suscripciones'],['XBOX','Suscripciones'],['STEAM','Suscripciones'],['TINDER','Suscripciones'],['BUMBLE','Suscripciones'],['LINKEDIN','Suscripciones'],['STRAVA','Suscripciones'],
+['CANAL DE ISABEL','Suministros (luz/agua/gas)'],['AGUAS','Suministros (luz/agua/gas)'],['GAS NATURAL','Suministros (luz/agua/gas)'],['REPSOL LUZ','Suministros (luz/agua/gas)'],['PLENITUDE','Suministros (luz/agua/gas)'],['OCTOPUS','Suministros (luz/agua/gas)'],['PODO','Suministros (luz/agua/gas)'],
+['O2 FIBRA','Telefonia / Internet'],['O2','Telefonia / Internet'],['JAZZTEL','Telefonia / Internet'],['LOWI','Telefonia / Internet'],['SIMYO','Telefonia / Internet'],['FINETWORK','Telefonia / Internet'],['AVATEL','Telefonia / Internet'],
+['MASCOTA','Mascota'],['VETERINARIO','Mascota'],['KIWOKO','Mascota'],['TIENDANIMAL','Mascota'],['PET','Mascota'],['MASKOKOTAS','Mascota'],['ZOOPLUS','Mascota'],
+['PELUQUERIA','Belleza / Peluqueria'],['BARBERIA','Belleza / Peluqueria'],['ESTETICA','Belleza / Peluqueria'],['DRUNI','Belleza / Peluqueria'],['PRIMOR','Belleza / Peluqueria'],['SEPHORA','Belleza / Peluqueria'],['DOUGLAS','Belleza / Peluqueria'],['PERFUMERIA','Belleza / Peluqueria'],['MANICURA','Belleza / Peluqueria'],['SPA','Belleza / Peluqueria'],['THE BODY SHOP','Belleza / Peluqueria'],['RITUALS','Belleza / Peluqueria'],['MERCADONA BELLEZA','Belleza / Peluqueria'],
+['REGALO','Regalos'],['FLORISTERIA','Regalos'],['INTERFLORA','Regalos'],['JUGUETERIA','Regalos'],['JUGUETTOS','Regalos'],['TOYS','Regalos'],
+['SEGURO','Seguros'],['MAPFRE','Seguros'],['MUTUA','Seguros'],['AXA','Seguros'],['ALLIANZ','Seguros'],['LINEA DIRECTA','Seguros'],['GENERALI','Seguros'],['ZURICH','Seguros'],['REALE','Seguros'],['PELAYO','Seguros'],['CASER','Seguros'],['VERTI','Seguros'],
+['AIRBNB','Viajes'],['BOOKING','Viajes'],['RYANAIR','Viajes'],['VUELING','Viajes'],['IBERIA','Viajes'],['EASYJET','Viajes'],['HOTEL','Viajes'],['HOSTEL','Viajes'],['EDREAMS','Viajes'],['KAYAK','Viajes'],['TRIVAGO','Viajes'],['CIVITATIS','Viajes'],['RENFE VIAJE','Viajes'],
+['MERCADONA','Comida / Supermercado']];
+
 
 function limpiarImporte(v){var s=String(v).replace(/\u00A0/g,'').replace(/[€\s]/g,'');if(s==='')return null;
   if(/,\d{1,2}$/.test(s)&&s.indexOf('.')>=0){s=s.replace(/\./g,'').replace(',','.');}else s=s.replace(',','.');
   var n=parseFloat(s);return isNaN(n)?null:Math.round(n*100)/100;}
 function limpiarConcepto(v){return String(v||'').split('\\')[0].replace(/\s+/g,' ').trim();}
 function parseFecha(v,yearHint){var s=String(v||'').trim();
+  // formato dd/mm o dd/mm/yy o dd/mm/yyyy o yyyy-mm-dd
   var m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})(?:[\/\-.](\d{2,4}))?$/);
   if(m){var d=+m[1],mo=+m[2],y=m[3]?+m[3]:(yearHint||new Date().getFullYear());if(y<100)y+=2000;
     if(mo>12&&d<=12){var t=d;d=mo;mo=t;} return y+'-'+('0'+mo).slice(-2)+'-'+('0'+d).slice(-2);}
@@ -301,14 +375,19 @@ function parseCsvBanco(txt){var lineas=txt.split('\n').filter(function(l){return
   var hc = joined.indexOf('importe')>=0||joined.indexOf('amount')>=0||joined.indexOf('concepto')>=0||joined.indexOf('concept')>=0||joined.indexOf('fecha')>=0||joined.indexOf('date')>=0;
   var iF=0,iC=1,iImp=-1,iBal=-1;
   if(hc){
+    // Fecha: 'fecha' o 'date' (pero NO 'date of operation/value' si hay una 'date' a secas)
     var jf=-1;cab.forEach(function(h,i){if(jf<0 && (h==='fecha'||h==='date'||h.indexOf('fecha')===0||h.indexOf('date')===0) && h.indexOf('operation')<0 && h.indexOf('value')<0 && h.indexOf('valor')<0 && h.indexOf('operac')<0)jf=i;});
     if(jf<0)cab.forEach(function(h,i){if(jf<0&&(h.indexOf('fecha')>=0||h.indexOf('date')>=0))jf=i;});
     iF=jf>=0?jf:0;
+    // Concepto / Concept / Descripción
     for(var a=0;a<cab.length;a++){if(cab[a].indexOf('concepto')>=0||cab[a].indexOf('concept')>=0||cab[a].indexOf('descrip')>=0){iC=a;break;}}
+    // Saldo / Balance (para NO confundirlo con el importe)
     for(var q=0;q<cab.length;q++){if(cab[q].indexOf('saldo')>=0||cab[q].indexOf('balance')>=0){iBal=q;break;}}
+    // Importe / Amount (nunca la de saldo)
     for(var b=0;b<cab.length;b++){if((cab[b].indexOf('importe')>=0||cab[b].indexOf('amount')>=0||cab[b].indexOf('cargo')>=0) && b!==iBal){iImp=b;break;}}
   }
   if(iImp<0){
+    // Sin cabecera clara: elegir la columna numérica con MÁS valores negativos (el importe tiene negativos; el saldo casi no)
     var best=-1,bestNeg=-1;var nc=filas[0].length;
     for(var col=0;col<nc;col++){ if(col===iBal)continue; var neg=0,num=0;
       for(var r=hc?1:0;r<Math.min(filas.length,40);r++){var v=(filas[r]||[])[col];var n=limpiarImporte(v);if(n!==null){num++;if(n<0)neg++;}}
@@ -320,13 +399,24 @@ function parseCsvBanco(txt){var lineas=txt.split('\n').filter(function(l){return
     var con=limpiarConcepto(row[iC]!==undefined?row[iC]:'');var fe=parseFecha(row[iF]);if(!fe)continue;
     out.push({f:fe,c:con,imp:imp});}return out;}
 
+// Parser principal para PDF de ING: prueba primero el formato "Movimientos" (tabla con Categoría)
+// y si no encaja, cae al parser del "Extracto integrado" mensual.
 function parsePdfIng(txt){
   var mov=parsePdfIngMovimientos(txt);
   if(mov && mov.length) return mov;
   return parsePdfIngIntegrado(txt);
 }
 
+// ---------- Parser B: PDF "Movimientos" (exportación desde app/web) ----------
+// Estructura: F. VALOR | CATEGORÍA | SUBCATEGORÍA | DESCRIPCIÓN | COMENTARIO | IMPORTE (€)
+// Ejemplo de línea: "FECHA  Categoría  Subcategoría  Descripción del comercio  IMPORTE"
+// Detalles importantes de este formato:
+//   - Cada movimiento aparece DUPLICADO (dos filas con misma fecha/importe/desc → dedup por fecha+desc+importe)
+//   - Trae CATEGORÍA propia que aprovechamos
+//   - Los "Movimientos excluidos / Traspaso entre cuentas" son movimientos internos → ignorar/traspaso
+//   - Los "Ahorro / Redondeo" son céntimos del redondeo → los tratamos como ahorro
 function parsePdfIngMovimientos(txt){
+  // Detectar formato por la cabecera (en cualquier orden de columnas)
   var U=upper(txt);
   var esFormatoMovimientos = (U.indexOf('F. VALOR')>=0 && U.indexOf('IMPORTE')>=0 && U.indexOf('SUBCATEGOR')>=0);
   if(!esFormatoMovimientos)return [];
@@ -345,11 +435,14 @@ function parsePdfIngMovimientos(txt){
     'FARMACIA, HERBOLARIO Y NUTRICION':'Salud / Farmacia','FARMACIA, HERBOLARIO Y NUTRICIÓN':'Salud / Farmacia',
     'SUPERMERCADOS Y ALIMENTACION':'Comida / Supermercado','SUPERMERCADOS Y ALIMENTACIÓN':'Comida / Supermercado',
     'MANTENIMIENTO DEL HOGAR':'Vivienda (alquiler/hipoteca)','TRASPASO ENTRE CUENTAS':CAT_TRASPASO,
-    'REDONDEO':CAT_AHORRO,'INGRESO BIZUM':CAT_TRASPASO,'INGRESOS DE OTRAS ENTIDADES':CAT_TRASPASO,'ABONO DE INTERESES':CAT_TRASPASO,
+    'REDONDEO':CAT_AHORRO,'INGRESO BIZUM':CAT_INGRESO,'INGRESOS DE OTRAS ENTIDADES':CAT_INGRESO,'ABONO DE INTERESES':CAT_TRASPASO,
     'COMPRAS (OTROS)':'Compras / Ropa','OTROS GASTOS (OTROS)':'Caprichos / Otros'};
 
+  // Normalizar: un único string con espacios simples (los saltos de línea se vuelven espacios).
+  // Así da igual cómo pdf.js parta el texto.
   var flat=txt.replace(/\r/g,' ').replace(/\n/g,' ').replace(/\u00A0/g,' ').replace(/\s+/g,' ');
 
+  // Cada registro empieza por una FECHA dd/mm/yyyy. Partimos por fecha conservándola.
   var partes=flat.split(/(?=\b\d{2}\/\d{2}\/\d{4}\b)/);
   var out=[];
   partes.forEach(function(seg){
@@ -357,14 +450,18 @@ function parsePdfIngMovimientos(txt){
     var mf=seg.match(/^(\d{2}\/\d{2}\/\d{4})\b/); if(!mf)return;
     var fecha=mf[1];
     var cuerpo=seg.substring(fecha.length).trim();
+    // localizar el importe: número con 2 decimales (punto o coma), posiblemente pegado a texto detrás
     var m=cuerpo.match(/(-?\d[\d.]*\.\d{2}|-?\d[\d.]*,\d{2})/);
     if(!m)return;
     var imp=limpiarImporte(m[1]); if(imp===null||imp===0)return;
-    var antes=cuerpo.substring(0,m.index).trim();
-    var despues=cuerpo.substring(m.index+m[1].length).trim();
+    var antes=cuerpo.substring(0,m.index).trim();   // descripción (empieza con "Pago en..." o "Traspaso...")
+    var despues=cuerpo.substring(m.index+m[1].length).trim(); // sub+categoría pegadas
+    // A veces el importe está ANTES de la descripción (según orden de columnas). Si "antes" está vacío,
+    // usamos "despues" como fuente de descripción/categoría.
     var cola=despues, descripcion=antes;
     if(!descripcion){ descripcion=despues; cola=''; }
 
+    // Determinar categoría por sub/categoría encontrada en la "cola" (o en toda la parte no-descripción)
     var buscarEn=upper(cola+' '+antes);
     var catFinal=null;
     var subs=Object.keys(mapaSub).sort(function(a,b){return b.length-a.length;});
@@ -372,7 +469,9 @@ function parsePdfIngMovimientos(txt){
     if(!catFinal){var cats=Object.keys(mapaCat).sort(function(a,b){return b.length-a.length;});
       for(var c=0;c<cats.length;c++){ if(buscarEn.indexOf(cats[c])>=0){catFinal=mapaCat[cats[c]];break;} } }
 
+    // Limpiar descripción: quitar "Pago en", nombres de categoría pegados y textos de redondeo
     descripcion=descripcion.replace(/^Pago en\s+/i,'');
+    // cortar la descripción si arrastró la sub/categoría (aparece "Cine, teatro..." etc.)
     Object.keys(mapaSub).concat(Object.keys(mapaCat)).forEach(function(kk){
       var idx=upper(descripcion).indexOf(kk);
       if(idx>0)descripcion=descripcion.substring(0,idx).trim();
@@ -383,12 +482,14 @@ function parsePdfIngMovimientos(txt){
     out.push({f:isoFecha(fecha),c:descripcion,imp:imp,subcuenta:'ING',categoriaING:catFinal});
   });
 
+  // Deduplicar (ING repite cada movimiento) por fecha+desc+importe
   var seen={},dedup=[];
   out.forEach(function(r){var k=r.f+'|'+r.c+'|'+r.imp.toFixed(2);if(seen[k]){return;}seen[k]=1;dedup.push(r);});
   return dedup;
 }
 function isoFecha(dmy){var p=String(dmy).split('/');if(p.length!==3)return null;return p[2]+'-'+('0'+p[1]).slice(-2)+'-'+('0'+p[0]).slice(-2);}
 
+// ---------- Parser A: "Extracto integrado" mensual (el de siempre) ----------
 function parsePdfIngIntegrado(txt){var lines=txt.split('\n');
   var out=[]; var yearHint=(new Date()).getFullYear();
   for(var i=0;i<Math.min(lines.length,50);i++){var m=lines[i].match(/\b(20\d{2})\b/);if(m){yearHint=+m[1];break;}}
@@ -408,9 +509,11 @@ function parsePdfIngIntegrado(txt){var lines=txt.split('\n');
     if(m){var f=parseFecha(m[1],yearHint);var con=limpiarConcepto(m[3]);var imp=limpiarImporte(m[4]);
       if(f && con && imp!==null && imp!==0) out.push({f:f,c:con,imp:imp,subcuenta:subcuenta});}
   });
+  // CRUCE: marcar los traspasos que tienen espejo en NARANJA (esos son los de ahorro)
   var enNaranja={};
   out.forEach(function(r){
     if(r.subcuenta==='ING NARANJA'){
+      // clave: fecha + valor absoluto (importe opuesto al de la cuenta espejo)
       var k=r.f+'|'+Math.abs(r.imp).toFixed(2);
       enNaranja[k]=(enNaranja[k]||0)+1;
     }
@@ -420,10 +523,12 @@ function parsePdfIngIntegrado(txt){var lines=txt.split('\n');
     if(!/traspaso|transferencia interna/i.test(r.c))return;
     var k=r.f+'|'+Math.abs(r.imp).toFixed(2);
     if(enNaranja[k] && enNaranja[k]>0){
+      // marcar el concepto para que la categorización lo reconozca como ahorro
       r.c = r.c + ' → Naranja';
       enNaranja[k]--;
     }
   });
+  // Enriquecer con la sección "Información sobre transferencias" (piso, mensual, etc.)
   var enriquecer={};
   var reTr=/^\s*(\d{2}\/\d{2})\s+(.*?)\s+(\d[\d\.]*,\d{2})\s*€/;
   for(var i2=0;i2<lines.length;i2++){
@@ -453,11 +558,12 @@ function parseCsv(t,sep){var rows=[],row=[],f='',q=false;for(var i=0;i<t.length;
   else{if(ch=='"')q=true;else if(ch===sep){row.push(f);f='';}else if(ch=='\n'){row.push(f);rows.push(row);row=[];f='';}else if(ch!='\r')f+=ch;}}
   if(f!==''||row.length){row.push(f);rows.push(row);}return rows;}
 
+/* ================= ESTADO (solo un perfil) ================= */
 var KEY='misGastos_v1';
 function nuevoEstado(){return {params:{obj:400,umbral:15,saldoInicial:0,saldoFecha:'',objTotal:0},mov:[],rules:REGLAS_DEF.slice(),budgets:{},hiddenKpis:[]};}
 var state=cargar();
 function cargar(){try{var s=localStorage.getItem(KEY);
-  if(!s){
+  if(!s){ // intentar migrar de la versión pareja (v3) si existiera
     var vieja=localStorage.getItem('controlGastos_v3');
     if(vieja){var v=JSON.parse(vieja);var n=nuevoEstado();n.mov=(v.mov&&v.mov.principal)||[];n.rules=v.rules||REGLAS_DEF.slice();n.budgets=v.budgets||{};if(v.params&&v.params.principal)n.params=v.params.principal;return n;}
     return nuevoEstado();
@@ -468,6 +574,7 @@ function guardar(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e)
 function toggleTema(){var dark=document.body.classList.toggle('dark');try{localStorage.setItem('miAhorroTema',dark?'dark':'light');}catch(e){}var b=document.getElementById('btnTema');if(b)b.textContent=dark?'☀️':'🌙';if(typeof Chart!=='undefined'&&Chart.defaults){Chart.defaults.color=dark?'#8a97a8':'#666';}render();}
 function aplicarTema(){var t='light';try{t=localStorage.getItem('miAhorroTema')||'light';}catch(e){}if(t==='dark'){document.body.classList.add('dark');var b=document.getElementById('btnTema');if(b)b.textContent='☀️';}}
 
+/* ================= FORMATO ================= */
 var eur0=new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0});
 var eur2=new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:2});
 var pct=function(x){return (x*100).toFixed(1).replace('.',',')+'%';};
@@ -475,6 +582,7 @@ var PAL=['#12203a','#0FB5A6','#F2B441','#F0685A','#8B6DB3','#457B9D','#8AB17D','
 function mesLegible(ym){var m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];var p=String(ym).split('-');return p.length>=2?(m[(+p[1])-1]+' '+p[0]):ym;}
 function esc(s){return String(s).replace(/[<>&]/g,function(c){return{'<':'&lt;','>':'&gt;','&':'&amp;'}[c];});}
 
+/* ================= FILTROS + CÁLCULO ================= */
 var tab='resumen', mes='todos', catFilter='', maskFilter='', hormFilter=false, evoMode='ahorro', charts={};
 function movs(){var umb=state.params.umbral||0;return state.mov.filter(function(m){
   if(mes!=='todos' && String(m.f).slice(0,7)!==mes) return false;
@@ -506,6 +614,7 @@ function promedioAhorro(){var ms=meses();if(!ms.length)return {v:0,fuente:'sin-d
   var s=0;mu.forEach(function(m){s+=ahorroExpDe(m);});if(s>0)return {v:s/mu.length,fuente:'aportaciones',n:mu.length};
   s=0;mu.forEach(function(m){s+=ingresosDe(m)-gastosDe(m);});return {v:s/mu.length,fuente:'implicito',n:mu.length};}
 
+/* ================= NAV ================= */
 function setTab(t){tab=t;[].forEach.call(document.querySelectorAll('.tab'),function(b){b.classList.toggle('active',b.dataset.v===t);});
   [].forEach.call(document.querySelectorAll('.view'),function(v){v.classList.remove('active');});
   document.getElementById('v-'+t).classList.add('active');
@@ -520,6 +629,7 @@ function pintarFiltros(){
   var sc=document.getElementById('catFilter');if(sc){sc.innerHTML='<option value="">🏷️ Categoría</option>'+CATNAMES.map(function(c){return '<option value="'+c+'">'+c+'</option>';}).join('');sc.value=catFilter;}
 }
 
+/* ================= RENDER ================= */
 function render(){
   pintarFiltros();
   if(tab==='resumen')renderResumen();
@@ -553,38 +663,43 @@ function renderResumen(){
     +hormCard
     +kpi('objetivo','Objetivo',eur0.format(d.obj),'var(--muted)','')
     +objCard;
-  
-  var ms=meses();
-  var estaVacio = ms.length === 0;
-
-  var contenido = selectorMes()
+  document.getElementById('v-resumen').innerHTML=
+     selectorMes()
     +editBtn
     +'<div class="kpis">'+kA+'</div>'
     +'<div class="kpis">'+kB+'</div>'
-    +(editKpis?'<div class="hint" style="text-align:center;margin:-4px 0 12px">Toca ✕ para ocultar una tarjeta, ＋ para recuperarla.</div>':'');
-
-  if (estaVacio) {
-    contenido += '<div class="panel" style="text-align:center;padding:30px 15px;">'
-      +'<h3 style="margin-bottom:10px">👋 ¡Bienvenido a MiAhorro!</h3>'
-      +'<p class="hint" style="font-size:14px;margin-bottom:20px">No hay movimientos guardados. Empieza subiendo tu primer extracto bancario o añade un movimiento manual.</p>'
-      +'<button class="btn btn-primary" onclick="openImport()" style="margin-right:8px">📤 Subir extracto</button>'
-      +'<button class="btn btn-ghost" onclick="openAdd()">➕ Añadir manual</button>'
-      +'</div>';
-  } else {
-    contenido += comparativaMes()
-      +resumenAnual()
-      +'<div class="panel"><h3>🧭 ¿Dónde se va el dinero?</h3><div class="chartbox"><canvas id="cDon"></canvas></div></div>'
-      +'<div class="panel"><h3>⚖️ Gasto vs Ahorro</h3><div class="chartbox"><canvas id="cBar"></canvas></div></div>'
-      +renderPresupuestos()
-      +renderTips();
-  }
-
-  document.getElementById('v-resumen').innerHTML = contenido;
-  if (!estaVacio) {
-    drawDon(d);drawBar(d);
-  }
+    +(editKpis?'<div class="hint" style="text-align:center;margin:-4px 0 12px">Toca ✕ para ocultar una tarjeta, ＋ para recuperarla.</div>':'')
+    +avisoBalance(d)
+    +comparativaMes()
+    +resumenAnual()
+    +'<div class="panel"><h3>🧭 ¿Dónde se va el dinero?</h3><div class="chartbox"><canvas id="cDon"></canvas></div></div>'
+    +'<div class="panel"><h3>⚖️ Gasto vs Ahorro</h3><div class="chartbox"><canvas id="cBar"></canvas></div></div>'
+    +renderPresupuestos()
+    +renderTips();
+  drawDon(d);drawBar(d);
 }
 function toggleHorm(){hormFilter=true;catFilter='';setTab('movs');}
+function avisoBalance(d){
+  // Tu regla: si cobras 2000, tus gastos no deberían superar tus ingresos.
+  // Si el balance (ingresos - gastos - ahorro) es negativo → o tiraste de ahorros, o hay algo mal.
+  if(mes==='todos')return '';
+  if(d.ingresos===0 && d.gastos===0)return '';
+  var balance=d.ahorroResiduo; // ingresos - gastos - ahorro
+  var soloGastoVsIngreso=d.ingresos-d.gastos; // sin contar ahorro
+  if(soloGastoVsIngreso<0){
+    // Gastaste más de lo que ingresaste (sin contar ni ahorro)
+    return '<div class="panel" style="border-left:4px solid var(--coral)">'
+      +'<div style="font-weight:800;color:var(--coral);font-size:14px">⚠️ Gastaste más de lo que ingresaste</div>'
+      +'<div style="font-size:13px;color:var(--ink);margin-top:5px">Este mes ingresaste '+eur0.format(d.ingresos)+' y gastaste '+eur0.format(d.gastos)+' (diferencia: '+eur0.format(soloGastoVsIngreso)+'). Si es correcto, seguramente tiraste de ahorros. Si no, revisa que no haya un gasto mal clasificado o un ingreso que falte.</div></div>';
+  }
+  if(balance<0){
+    // Ingresos cubren gastos, pero al sumar el ahorro te pasas → aportaste ahorro tirando de colchón
+    return '<div class="panel" style="border-left:4px solid var(--amber)">'
+      +'<div style="font-weight:800;color:#c8860a;font-size:14px">💡 Aportaste más al ahorro de lo que te sobró</div>'
+      +'<div style="font-size:13px;color:var(--ink);margin-top:5px">Ingresaste '+eur0.format(d.ingresos)+', gastaste '+eur0.format(d.gastos)+' y ahorraste '+eur0.format(d.ahorroExplicito)+'. Para cuadrar el ahorro tiraste '+eur0.format(-balance)+' de tu colchón. Es normal si fue a propósito.</div></div>';
+  }
+  return '';
+}
 function resumenAnual(){
   if(mes!=='todos')return '';
   var ms=meses();if(ms.length<2)return '';
@@ -606,6 +721,7 @@ function resumenAnual(){
     +'</div>';
 }
 function detectarSuscripciones(){
+  // comercios que aparecen en 2+ meses con importe similar. Priorizamos gastos "fijos" reales.
   var excluir=['Comida / Supermercado','Restaurantes / Bares','Cafe / Snacks','Compras / Ropa','Caprichos / Otros'];
   var porComercio={};
   state.mov.forEach(function(m){if(+m.imp>=0)return;if(m.cat===CAT_TRASPASO||m.cat===CAT_AHORRO)return;if(excluir.indexOf(m.cat)>=0)return;
@@ -622,12 +738,12 @@ function detectarSuscripciones(){
 }
 function comparativaMes(){
   if(mes==='todos')return '';
-  var ms=meses();var idx=ms.indexOf(mes);if(idx<=0)return '';
+  var ms=meses();var idx=ms.indexOf(mes);if(idx<=0)return ''; // no hay mes anterior
   var prev=ms[idx-1];
   var gAct=gastosDe(mes),gPrev=gastosDe(prev);
   var aAct=ahorroExpDe(mes),aPrev=ahorroExpDe(prev);
   if(gPrev===0&&aPrev===0)return '';
-  function fila(lab,act,prev,bueno){
+  function fila(lab,act,prev,bueno){ // bueno='menos'→bajar es bueno; 'mas'→subir es bueno
     if(prev===0)return '';
     var dif=act-prev;var pctg=Math.round(Math.abs(dif)/prev*100);
     if(dif===0)return '<div class="cmp-row"><span>'+lab+'</span><span class="cmp-eq">= igual</span></div>';
@@ -641,8 +757,9 @@ function comparativaMes(){
 }
 function selectorMes(){
   var ms=meses();
-  var etiqueta = (mes==='todos' || ms.length===0) ? 'Todos los meses' : mesLegible(mes);
+  var etiqueta = mes==='todos' ? 'Todos los meses' : mesLegible(mes);
   var idx = mes==='todos' ? -1 : ms.indexOf(mes);
+  // ‹ hay anterior si idx>0, o si estamos en 'todos' y hay meses
   var hayPrev = (mes!=='todos' && idx>0);
   var hayNext = (mes!=='todos' && idx>=0 && idx<ms.length-1);
   return '<div class="selmes">'
@@ -761,6 +878,7 @@ function renderAjustes(){
     +'<input type="file" id="impxls" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)">'
     +'<button class="btn btn-ghost" onclick="borrarTodo()">🧹 Borrar todo</button>'
     +'</div><div class="hint" style="margin-top:10px">Tus datos se guardan solo en este dispositivo. Haz copia de vez en cuando.</div></div>';
+  // presupuestos
   var b=state.budgets||{};
   document.getElementById('budgets').innerHTML=CATNAMES.filter(function(c){return c!==CAT_INGRESO&&c!==CAT_TRASPASO&&c!==CAT_AHORRO;}).map(function(c){
     return '<div class="budgetrow"><div style="font-size:13px"><b>'+c+'</b></div><input type="number" step="10" placeholder="—" value="'+(b[c]||'')+'" onchange="setBudget(\''+c.replace(/'/g,"\\'")+'\',this.value)"><span class="hint">€/mes</span></div>';
@@ -769,6 +887,7 @@ function renderAjustes(){
 function setParam(k,v){if(k==='saldoFecha')state.params[k]=v||'';else state.params[k]=parseFloat(v)||0;guardar();render();}
 function setBudget(c,v){var n=parseFloat(v);if(!n||n<=0)delete state.budgets[c];else state.budgets[c]=n;guardar();}
 
+/* ---------- charts ---------- */
 function drawDon(d){destroy('cDon');var it=CATNAMES.map(function(c){return{c:c,v:d.porCat[c]||0};}).filter(function(x){return x.v>0&&x.c!==CAT_INGRESO&&x.c!==CAT_TRASPASO&&x.c!==CAT_AHORRO;}).sort(function(a,b){return b.v-a.v;});
   if(!it.length){var cv=document.getElementById('cDon');if(cv&&cv.parentNode)cv.parentNode.innerHTML='<div class="empty">Sin gastos en esta vista</div>';return;}
   charts.cDon=new Chart(document.getElementById('cDon'),{type:'doughnut',data:{labels:it.map(function(x){return x.c;}),datasets:[{data:it.map(function(x){return x.v;}),backgroundColor:PAL,borderWidth:2,borderColor:'#fff'}]},
@@ -784,12 +903,14 @@ function drawEvo(){destroy('cEvo');var ms=meses();if(ms.length<1){document.getEl
   function val(ym){if(evoMode==='gastos')return gastosDe(ym);if(evoMode==='ingresos')return ingresosDe(ym);return ahorroExpDe(ym);}
   charts.cEvo=new Chart(document.getElementById('cEvo'),{type:'line',data:{labels:ms.map(mesLegible),datasets:[{label:evoMode,data:ms.map(val),borderColor:'#0FB5A6',backgroundColor:'#0FB5A622',tension:.35,fill:true,pointRadius:4,pointBackgroundColor:'#0FB5A6',borderWidth:2.5}]},options:{plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){return ' '+eur2.format(c.parsed.y);}}}},scales:{y:{ticks:{callback:function(v){return eur0.format(v);}}}}}});}
 
+/* ---------- presupuestos y tips ---------- */
 function renderPresupuestos(){
   var b=state.budgets||{},cats=Object.keys(b).filter(function(k){return b[k]>0;});if(!cats.length)return '';
   var mesRef=mes==='todos'?new Date().toISOString().slice(0,7):mes;var porCat={};
   state.mov.forEach(function(m){if(String(m.f).slice(0,7)!==mesRef)return;if(m.cat===CAT_TRASPASO||m.cat===CAT_INGRESO||m.cat===CAT_AHORRO)return;if(+m.imp<0)porCat[m.cat]=(porCat[m.cat]||0)+(-m.imp);});
   var html='<div class="panel"><h3>🎯 Presupuestos — '+mesLegible(mesRef)+'</h3>';
   cats.forEach(function(c){var g=porCat[c]||0,tope=+b[c],p=tope>0?Math.min(g/tope,1.3):0;var cls=p<0.75?'':(p<1?'warn':'over');
+    // Alerta a mitad de mes: si el mes en curso y al ritmo actual vas a pasarte
     var aviso='';
     var hoy=new Date();var mesActual=hoy.toISOString().slice(0,7);
     if(mesRef===mesActual && tope>0){var dia=hoy.getDate();var diasMes=new Date(hoy.getFullYear(),hoy.getMonth()+1,0).getDate();
@@ -817,6 +938,7 @@ function generarTips(){
 }
 function renderTips(){var tips=generarTips();return '<div class="panel tips"><h3>💡 Tips para ahorrar</h3>'+tips.map(function(t){return '<div class="tip"><div style="font-size:20px;flex:0 0 28px;text-align:center">'+t.i+'</div><div style="font-size:13px;line-height:1.45">'+t.t+'</div></div>';}).join('')+'</div>';}
 
+/* ---------- desglose ahorro ---------- */
 function mostrarDesgloseAhorro(){
   var ini=+state.params.saldoInicial||0,corte=state.params.saldoFecha||'';
   var aport=[];state.mov.forEach(function(m){if(m.cat!==CAT_AHORRO)return;var inc=!corte||String(m.f)>corte;var s=signoAhorro(m.c,+m.imp||0,m.tar||'');aport.push({f:m.f,c:m.c,imp:Math.abs(+m.imp||0)*s,tar:m.tar||'',inc:inc,s:s});});
@@ -832,6 +954,7 @@ function mostrarDesgloseAhorro(){
   document.getElementById('desgloseBody').innerHTML=html;openM('ov-desglose');
 }
 
+/* ---------- importar ---------- */
 var pendientes=null;
 function openM(id){document.getElementById(id).classList.add('show');}
 function closeM(id){document.getElementById(id).classList.remove('show');}
@@ -859,7 +982,18 @@ function analizar(){
   var rows=window._isPdf?parsePdfIng(raw):parseCsvBanco(raw);
   if(!rows.length){document.getElementById('imp-msg').innerHTML='⚠️ No he encontrado movimientos.';return;}
   var vistos={};
-  rows.forEach(function(r){r.cuenta=r.subcuenta||banco;var cat=r.categoriaING?r.categoriaING:categorizar(r.c,r.imp,r.cuenta);r.cat=cat;r.matched=!!cat;
+  rows.forEach(function(r){r.cuenta=r.subcuenta||banco;
+    // La categoría de ING es muy buena para GASTOS (Alimentación, Ocio...), pero para
+    // ingresos/traspasos/ahorro puede fallar (marca bizums como "Otros ingresos").
+    // Regla: si ING dice ingreso/traspaso/ahorro, lo decide MI lógica estricta. Si es un
+    // gasto normal, usamos la categoría de ING directamente.
+    var cat;
+    if(r.categoriaING && r.categoriaING!==CAT_INGRESO && r.categoriaING!==CAT_TRASPASO && r.categoriaING!==CAT_AHORRO){
+      cat=r.categoriaING; // gasto con categoría fiable de ING
+    } else {
+      cat=categorizar(r.c,r.imp,r.cuenta); // ingreso/traspaso/ahorro → mi lógica manda
+    }
+    r.cat=cat;r.matched=!!cat;
     if(!cat){var kw=primeraPalabra(r.c);r.kw=kw;if(!vistos[kw])vistos[kw]={ejemplo:r.c,cat:'Caprichos / Otros'};}});
   pendientes={banco:banco,rows:rows,unknown:vistos};mostrarPaso2();
 }
@@ -887,23 +1021,38 @@ function doAdd(){var imp=parseFloat(document.getElementById('add-importe').value
   state.mov.push({f:document.getElementById('add-fecha').value,c:document.getElementById('add-concepto').value||'(sin concepto)',imp:Math.round(imp*100)/100,cat:document.getElementById('add-cat').value,tar:document.getElementById('add-tarjeta').value||''});
   guardar();closeM('ov-add');setTab('movs');}
 
+/* ---------- datos ---------- */
 function exportBackup(){var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='mis-gastos-backup.json';a.click();}
 function importBackup(ev){var f=ev.target.files[0];if(!f)return;var rd=new FileReader();rd.onload=function(){try{
     var o=JSON.parse(rd.result);
+    // Detectar formato ANTIGUO (app de pareja): mov es un objeto con listas por persona
     if(o && o.mov && !Array.isArray(o.mov) && typeof o.mov==='object'){
       var claves=Object.keys(o.mov).filter(function(k){return Array.isArray(o.mov[k]);});
-      var claveTitular=null,maxLen=-1;
-      ['principal'].concat(claves).forEach(function(k){if(o.mov[k]&&o.mov[k].length>maxLen){maxLen=o.mov[k].length;claveTitular=k;}});
+      // Buscar TU lista por nombre (prioridad), no la más grande (podría ser la de otra persona)
+      var misNombres=['principal','yo','mi','mio','titular','me'];
+      var claveTitular=null;
+      // 1º: coincidencia por nombre
+      claves.forEach(function(k){if(!claveTitular && misNombres.indexOf(k.toLowerCase().trim())>=0)claveTitular=k;});
+      // 2º: si no hay match por nombre y solo hay una lista, esa
+      if(!claveTitular && claves.length===1)claveTitular=claves[0];
+      // 3º: si sigue sin saberse, preguntar al usuario cuál es la suya
+      if(!claveTitular && claves.length>1){
+        var opciones=claves.map(function(k,i){return (i+1)+') '+k+' ('+o.mov[k].length+' mov)';}).join('\n');
+        var resp=prompt('El archivo tiene varias personas. ¿Cuál es la TUYA? Escribe el número:\n\n'+opciones);
+        var idx=parseInt(resp,10)-1;
+        if(idx>=0 && idx<claves.length)claveTitular=claves[idx];
+        else{alert('No seleccionaste una opción válida. No se importó nada.');return;}
+      }
       var movAntiguos = claveTitular?o.mov[claveTitular]:[];
-      var personas=claves.filter(function(k){return o.mov[k].length;});
       var nuevo={params:nuevoEstado().params,mov:movAntiguos,rules:o.rules||REGLAS_DEF.slice(),budgets:o.budgets||{},hiddenKpis:[]};
       if(o.params){var pk=o.params[claveTitular]||o.params.principal||(o.params.obj!==undefined?o.params:null);if(pk)nuevo.params=Object.assign(nuevo.params,pk);}
       if(nuevo.params.objTotal===undefined)nuevo.params.objTotal=0;
       state=nuevo;guardar();render();
-      var otras=personas.filter(function(p){return p!==claveTitular;});
-      alert('✅ Copia restaurada. Importé '+movAntiguos.length+' movimientos.'+(otras.length?('\n\n(El archivo también tenía otra lista de datos que no se importa: esta app es solo para un perfil.)'):''));
+      var otras=claves.filter(function(p){return p!==claveTitular && o.mov[p].length;});
+      alert('✅ Importé '+movAntiguos.length+' movimientos de "'+claveTitular+'".'+(otras.length?('\n\n(Ignoré los datos de: '+otras.join(', ')+')'):''));
       return;
     }
+    // Formato NUEVO (mono-perfil)
     if(o && Array.isArray(o.mov)){
       state=o;if(!state.rules)state.rules=REGLAS_DEF.slice();if(!state.budgets)state.budgets={};if(!state.hiddenKpis)state.hiddenKpis=[];if(!state.params)state.params=nuevoEstado().params;if(state.params.objTotal===undefined)state.params.objTotal=0;
       guardar();render();alert('✅ Copia restaurada. '+state.mov.length+' movimientos.');return;
@@ -923,6 +1072,7 @@ function importExcel(ev){var f=ev.target.files[0];if(!f)return;if(typeof XLSX===
     var arr=filas.arr,hi=filas.hi;var cab=arr[hi].map(function(x){return String(x||'').toLowerCase();});
     function col(keys){for(var i=0;i<cab.length;i++){for(var k=0;k<keys.length;k++){if(cab[i].indexOf(keys[k])>=0)return i;}}return -1;}
     var iF=col(['fecha']),iC=col(['concepto','descrip']),iImp=col(['importe','import']),iCat=col(['categor']),iTar=col(['tarjeta','cuenta','banco']);
+    // ¿Los datos empiezan con el bloque de ejemplos del template? (marcado "ejemplos, bórralos")
     var hayMarcaEjemplo=false;
     for(var e=hi+1;e<Math.min(hi+3,arr.length);e++){if(/ejempl|b[óo]rr/i.test(String((arr[e]||[]).join(' ')))){hayMarcaEjemplo=true;break;}}
     var conceptosEjemplo=['alquiler piso','compra mercadona','cafe con leche','netflix','cena restaurante','devolucion tienda'];
@@ -930,6 +1080,7 @@ function importExcel(ev){var f=ev.target.files[0];if(!f)return;if(typeof XLSX===
     for(var r=hi+1;r<arr.length;r++){var row=arr[r]||[];var fRaw=row[iF],cc=row[iC],impRaw=row[iImp];
       if(fRaw==null&&cc==null&&impRaw==null)continue;
       if(/← ?ejempl|b[óo]rr/i.test(String(row.join(' '))))continue;
+      // si el Excel trae los ejemplos del template, saltar esos conceptos concretos
       if(hayMarcaEjemplo && conceptosEjemplo.indexOf(String(cc||'').toLowerCase().trim())>=0)continue;
       var imp=limpiarImporte(impRaw);if(imp===null||imp===0){saltados++;continue;}
       var fe=parseFecha(fRaw);if(!fe){saltados++;continue;}
@@ -953,7 +1104,8 @@ function exportExcel(){if(typeof XLSX==='undefined'){alert('Sin conexión, no pu
 
 aplicarTema();
 setTab('resumen');
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=2').catch(function(){});});} // <-- CACHE BUSTER AQUÍ
+// Registrar service worker para funcionamiento offline (PWA)
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}
 </script>
 </body>
 </html>
